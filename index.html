@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Filter Creator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            color: #000;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .card {
+            margin-bottom: 20px;
+            border: 1px solid rgba(0, 0, 0, 0.125);
+        }
+        .form-control:focus, .btn:focus {
+            box-shadow: 0 0 0 0.25rem rgba(0, 0, 0, 0.25);
+            border-color: #000;
+        }
+        .btn-primary {
+            background-color: #000;
+            border-color: #000;
+        }
+        .btn-primary:hover, .btn-primary:focus {
+            background-color: #333;
+            border-color: #333;
+        }
+        .btn-outline-primary {
+            color: #000;
+            border-color: #000;
+        }
+        .btn-outline-primary:hover {
+            background-color: #000;
+            border-color: #000;
+            color: #fff;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+        .json-output {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 15px;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .color-preview {
+            width: 30px;
+            height: 30px;
+            display: inline-block;
+            border: 1px solid #dee2e6;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+        .filter-item, .group-item {
+            border-left: 5px solid #000;
+            padding-left: 15px;
+            margin-bottom: 10px;
+        }
+        .nav-tabs .nav-link.active {
+            font-weight: bold;
+            color: #000;
+            border-bottom: 2px solid #000;
+        }
+        .nav-tabs .nav-link {
+            color: #6c757d;
+        }
+        /* Drag and drop styles */
+        .filter-item {
+            cursor: grab;
+        }
+        .filter-item.dragging {
+            opacity: 0.5;
+            border: 2px dashed #000;
+        }
+        .filter-item.drag-over {
+            border: 2px dashed #007bff;
+            background-color: rgba(0, 123, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <h1 class="text-center mb-4">JSON Filter Creator</h1>
+        
+        <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="editor-tab" data-bs-toggle="tab" data-bs-target="#editor" type="button" role="tab" aria-controls="editor" aria-selected="true">Editor</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="json-tab" data-bs-toggle="tab" data-bs-target="#json" type="button" role="tab" aria-controls="json" aria-selected="false">JSON Output</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="import-tab" data-bs-toggle="tab" data-bs-target="#import" type="button" role="tab" aria-controls="import" aria-selected="false">Import/Export</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="myTabContent">
+            <div class="tab-pane fade show active" id="editor" role="tabpanel" aria-labelledby="editor-tab">
+                <div class="row">
+                    <!-- Groups Section -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-white">
+                                <h4 class="mb-0">Groups</h4>
+                            </div>
+                            <div class="card-body">
+                                <form id="groupForm">
+                                    <div class="mb-3">
+                                        <label for="groupName" class="form-label">Group Name</label>
+                                        <input type="text" class="form-control" id="groupName" placeholder="Enter group name">
+                                    </div>
+                                    <!-- Replace the existing group color input with this -->
+                                    <div class="mb-3">
+                                        <label for="groupColor" class="form-label">Group Color</label>
+                                        <div class="input-group">
+                                            <input type="color" class="form-control form-control-color" id="groupColor" value="#96CEB4" title="Choose group color">
+                                            <input type="text" class="form-control" id="groupColorHex" value="#96CEB4" placeholder="Color hex code">
+                                        </div>
+                                        <small class="text-muted">This color will be used for the left border of the group.</small>
+                                    </div>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="groupExpanded" checked>
+                                        <label class="form-check-label" for="groupExpanded">Expanded by default</label>
+                                    </div>
+                                    <button type="button" class="btn btn-primary" id="addGroupBtn">Add Group</button>
+                                </form>
+                                
+                                <hr>
+                                
+                                <div id="groupsList" class="mt-4">
+                                    <h5>Added Groups</h5>
+                                    <div class="list-group" id="groupsContainer">
+                                        <!-- Groups will be added here dynamically -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Filters Section -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-white">
+                                <h4 class="mb-0">Filters</h4>
+                            </div>
+                            <div class="card-body">
+                                <form id="filterForm">
+                                    <div class="mb-3">
+                                        <label for="filterName" class="form-label">Filter Name</label>
+                                        <input type="text" class="form-control" id="filterName" placeholder="Enter filter name">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="filterPattern" class="form-label">Regex Pattern</label>
+                                        <textarea class="form-control" id="filterPattern" rows="3" placeholder="Enter regex pattern"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="filterGroup" class="form-label">Group</label>
+                                        <select class="form-select" id="filterGroup">
+                                            <option value="">Select a group</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="tagStyle" class="form-label">Tag Style</label>
+                                        <select class="form-select" id="tagStyle">
+                                            <option value="filled">Filled</option>
+                                            <option value="outlined">Outlined</option>
+                                        </select>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="tagColor" class="form-label">Tag Color</label>
+                                            <div class="input-group">
+                                                <input type="color" class="form-control form-control-color" id="tagColor" value="#000000">
+                                                <input type="text" class="form-control" id="tagColorHex" value="#000000">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="textColor" class="form-label">Text Color</label>
+                                            <div class="input-group">
+                                                <input type="color" class="form-control form-control-color" id="textColor" value="#FFFFFF">
+                                                <input type="text" class="form-control" id="textColorHex" value="#FFFFFF">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="imageURL" class="form-label">Image URL (Optional)</label>
+                                        <input type="text" class="form-control" id="imageURL" placeholder="Enter image URL">
+                                        <div class="form-text">Add an image to display with this filter</div>
+                                    </div>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="filterEnabled" checked>
+                                        <label class="form-check-label" for="filterEnabled">Enabled</label>
+                                    </div>
+                                    <button type="button" class="btn btn-primary" id="addFilterBtn">Add Filter</button>
+                                </form>
+                                
+                                <hr>
+                                
+                                <div id="filtersList" class="mt-4">
+                                    <h5>Added Filters</h5>
+                                    <div class="list-group" id="filtersContainer">
+                                        <!-- Filters will be added here dynamically -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="json" role="tabpanel" aria-labelledby="json-tab">
+                <div class="card">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">JSON Output</h4>
+                        <button class="btn btn-outline-primary btn-sm" id="copyJsonBtn">Copy to Clipboard</button>
+                    </div>
+                    <div class="card-body">
+                        <pre class="json-output" id="jsonOutput"></pre>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="import" role="tabpanel" aria-labelledby="import-tab">
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <h4 class="mb-0">Import/Export JSON</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <h5>Import JSON</h5>
+                            <div class="mb-3">
+                                <textarea class="form-control" id="importJson" rows="10" placeholder="Paste your JSON here"></textarea>
+                            </div>
+                            <button class="btn btn-primary" id="importJsonBtn">Import</button>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="mb-3">
+                            <h5>Export Options</h5>
+                            <button class="btn btn-outline-primary me-2" id="downloadJsonBtn">Download JSON File</button>
+                            <button class="btn btn-outline-primary" id="resetAllBtn">Reset All Data</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
